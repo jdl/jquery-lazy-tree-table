@@ -12,13 +12,20 @@
  * @version 0.1
 */
 ;(function($) {
-  $.fn.lazyTableTree = function(options) {
+  $.fn.lazyTreeTable = function(options) {
     debug(this);
     var defaults = {
-      childFetchPath: "#"
+      childFetchPath: "#",
+      childRowClassPrefix: "ltt-child-of-",
+      childPlaceholderRowClass: "ltt-child-placeholder",
+      expandClass: "ltt-expand",
+      collapseClass: "ltt-collapse",
+      spinnerClass: "spinner"
     };
     var opts = $.extend(defaults, options);
-
+    
+    var isChildRegex = new RegExp(opts.childRowClassPrefix);
+    
     return this.each(function() {
       initExpansionStates(this);
     });
@@ -77,19 +84,19 @@
       // Don't let 'siblings' confuse you here.  That's in terms of the table, where all of the
       // rows are siblings. The 'children' we're looking for are other rows which reference the
       // current row as a parent.
-      return $(row).siblings('[parentid=' + row.id + ']');
+      return $(row).siblings('.' + opts.childRowClassPrefix + row.id);
     };
     
     // There should only be one placeholder child per parent, but this returns all of them if it
     // finds more than one.
     function getPlaceholderChildren(row) {
-      return $(row).siblings('.att_placeholder[parentid=' + row.id + ']');
+      return getChildren(row).filter('.' + opts.childPlaceholderRowClass)
     }
     
     // Given a node (row), this returns true if this row is a child of
     // another row.
     function isChild(row) {
-      if (row != null && $(row).attr('parentid') != null && $(row).attr('parentid') != '') {
+      if (row != null && $(row).attr('class').match(isChildRegex)) {
         return true;
       } else {
         return false;
@@ -100,7 +107,7 @@
     // This only drills down one level in the tree.  It won't open all of the 
     // descendents.
     function expandChildren(parentRow) {
-      if (getPlaceholderChildren(row).length > 0) {
+      if (getPlaceholderChildren(parentRow).length > 0) {
         lazyLoadChildren(parentRow);
       }
       getChildren(parentRow).each(function(i, child) {
@@ -112,9 +119,11 @@
     // Given a parent row, this finds any children which are currently placeholders and replaces them
     // with data from the server.
     function lazyLoadChildren(parentRow) {
+      $('td:first', parentRow).addClass(opts.spinnerClass);
       $.get(opts.childFetchPath, function(data){
         getPlaceholderChildren(parentRow).remove();
         $(parentRow).after(data);
+        $('td:first', parentRow).removeClass(opts.spinnerClass);
       });
     }
     
@@ -122,8 +131,9 @@
     // Note that the element being passed into here is the row which contains the link.
     function handleExpandEvent(event) {
       row = event.data.element;
+      $(getExpandLink(row)).hide();
       expandChildren(row);
-      toggleExpandCollapseLinks(row);
+      $(getCollapseLink(row)).show();
       event.preventDefault();
     };
     
@@ -145,12 +155,12 @@
     
     // Finds the "expand" link in a given row.
     function getExpandLink(row) {
-      return $('td:first > a.att_expand_button', $(row))[0]
+      return $('td:first > a.' + opts.expandClass, $(row))[0]
     };
 
     // Finds the "collapse" link in a given row.
     function getCollapseLink(row) {
-      return $('td:first > a.att_collapse_button', $(row))[0]
+      return $('td:first > a.' + opts.collapseClass, $(row))[0]
     };
     
     // Switches the show/hide states for both the expand and collapse links in a given row.

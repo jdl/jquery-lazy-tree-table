@@ -11,7 +11,7 @@
  * @author  James Ludlow
  * @version 0.1
 */
-(function($) {
+;(function($) {
   $.fn.lazyTableTree = function(options) {
     debug(this);
     var defaults = {

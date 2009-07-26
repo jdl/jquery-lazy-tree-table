@@ -1,0 +1,20 @@
+=jQuery plugin: LazyTreeTable
+
+Adds asynchronous expand/collapse functions to a table.
+
+==What's required in your HTML.
+ - A unique table ID.
+ - Each row needs a unique ID.
+ - Child rows identify their parent with a 'parentid' attribute.
+
+==Usage
+ In your HTML:
+  $(document).ready(function() {
+    $('#myTable').asyncTableTree({
+      childFetchPath: "/path/to/fetch/child/data"
+  });
+
+ The childFetchPath is the location of the action that will return the child rows of a given
+ row. This action will be sent a 'parentRowId' param.  It is expected to return one or more TR
+ tags as HTML. These will be injected into the existing table below the parent row.
+

@@ -21,8 +21,9 @@
       collapseClass: "collapse",
       spinnerClass: "spinner",
       childTypePrefix: "child-type-",  // Only needed if you want to have a parent with multiple sets of children.
-      parentHtmlType: "tr" // 'tr' or 'tbody'. Complex tables which use rowspan can't really use a tr as a parent. Each node should be grouped into it's own tbody.
-      
+      parentHtmlType: "tr", // 'tr' or 'tbody'. Complex tables which use rowspan can't really use a tr as a parent. Each node should be grouped into it's own tbody.
+      extraParamsFormId: '', // If set to a form ID, the values from the form will be passed along with any remote calls.
+      extraParamsIgnoreList: [] // Blacklist for form input NAMES (not IDs) that you want to ignore.
     };
     var opts = $.extend(defaults, options);
     
@@ -116,8 +117,8 @@
     
     // Given a node (node), this returns true if there is another node
     // which lists this node as a parent.
-    function hasChildren(node) {
-      if (node != null && getChildren(node).length > 0) {
+    function hasChildren(node, childType) {
+      if (node != null && getChildren(node, childType).length > 0) {
         return true;
       } else {
         return false;
@@ -139,7 +140,11 @@
       if (childType) {
         selectorString = selectorString + "." + childType;
       }
-      return $(node).siblings(selectorString);
+      // Finding the node again by ID is a hack to get around what appears to be a bug in 
+      // jQuery. Certain nodes would make it here with a null parent element, when the parent
+      // elem definitely existed. 
+      var children = $('#' + node.id).siblings(selectorString); 
+      return children;
     };
     
     // There should only be one placeholder child per parent, but this returns all of them if it
@@ -158,44 +163,6 @@
       }
     };
     
-    // Given a parent node, this will expand (show) all of its child nodes.
-    // This only drills down one level in the tree.  It won't open all of the 
-    // descendents.
-    function expandChildren(parentNode, childType) {
-      if (getPlaceholderChildren(parentNode, childType).length > 0) {
-        lazyLoadChildren(parentNode, childType);
-      }
-      getChildren(parentNode, childType).each(function(i, child) {
-        $(child).show();
-      });
-    };
-    
-    // Given a parent node, this finds any children which are currently placeholders and replaces them
-    // with data from the server.
-    function lazyLoadChildren(parentNode, childType) {
-      $('td:first', parentNode).addClass(opts.spinnerClass);
-      $.get(opts.childFetchPath, {child_type: childType}, function(data) {
-        getPlaceholderChildren(parentNode, childType).remove();
-        $(parentNode).after(data);
-        
-        // Hide any grandchildren (or lower) nodes from the parent that
-        // was just expanded.
-        getChildren(parentNode).each(function(i, newNode){
-          applyToBranch(newNode, function(node) {
-            $(node).hide();
-          });
-        });
-      
-        // Initialize the newly injected nodes.
-        // First, set up the expand/collapse links for this branch.
-        applyToBranch(parentNode, function(node) {
-          initNodeLinks(node);
-        });
-        
-        $('td:first', parentNode).removeClass(opts.spinnerClass);
-      });
-    };
-    
     /* Someone clicked an "expand" link.
      * Several things are about to happen:
      *   1. Hide the clicked expand link.
@@ -208,10 +175,11 @@
      */
     function handleExpandEvent(event) {
       var node = event.data.element;
-      var childType = matchingClassFromElement(hasChildTypeRegex, event.target);
+      var clickedAnchor = this;
+      var childType = matchingClassFromElement(hasChildTypeRegex, clickedAnchor);
       
       // Hide the link that was clicked.
-      $(event.target).hide();
+      $(clickedAnchor).hide();
       expandChildren(node, childType);
       $(getCollapseLinks(node, childType)).show();
       replaceChildrenWithPlaceholder(node, childType);
@@ -234,6 +202,60 @@
       event.preventDefault();
     };
     
+    // Given a parent node, this will expand (show) all of its child nodes.
+    // This only drills down one level in the tree.  It won't open all of the 
+    // descendents.
+    function expandChildren(parentNode, childType) {
+      if (getPlaceholderChildren(parentNode, childType).length > 0) {
+        lazyLoadChildren(parentNode, childType);
+      }
+      getChildren(parentNode, childType).each(function(i, child) {
+        $(child).show();
+      });
+    };
+    
+    // Given a parent node, this finds any children which are currently placeholders and replaces them
+    // with data from the server.
+    function lazyLoadChildren(parentNode, childType) {
+      $('td:first', parentNode).addClass(opts.spinnerClass);
+      // For a child type, we're not sending the prefix to the server.
+      // ex: "child-type-foo" would simply send "foo" as the child_type param.
+      $.get(opts.childFetchPath, jQuery.extend({child_type: childType.slice(opts.childTypePrefix.length), parent_node: parentNode.id}, fetchExtraParams()), function(data) {
+        getPlaceholderChildren(parentNode, childType).remove();
+        $(parentNode).after(data);
+        
+        // Hide any grandchildren (or lower) nodes from the parent that
+        // was just expanded.
+        getChildren(parentNode).each(function(i, newNode){
+          applyToBranch(newNode, function(node) {
+            $(node).hide();
+          });
+        });
+      
+        // Initialize the newly injected nodes.
+        applyToBranch(parentNode, function(node) {
+          initNodeLinks(node);
+        });
+        
+        $('td:first', parentNode).removeClass(opts.spinnerClass);
+      });
+    };
+    
+    // If the option "extraParamsFormId" has been set, this generates name-value pairs from 
+    // each input and select element in the form. Element names can be blacklisted by setting the
+    // extraParamsIgnoreList array in the options.
+    function fetchExtraParams() {
+      var extraParams = {};
+      if (opts.extraParamsFormId != '') {
+        $('input,select', '#' + opts.extraParamsFormId).each(function(i, field) {
+          // Add this input field as an extra param, unless the name appears in our blacklist.
+          if (opts.extraParamsIgnoreList.length > 0 && !arrayContains(opts.extraParamsIgnoreList, field.name)) {
+            extraParams[field.name] = field.value;
+          }
+        });
+      }
+      return extraParams;
+    };
     
     /*
      * Checks for any non-placeholder children which are not of the ignoredChildType
@@ -268,17 +290,7 @@
         $(node).after('<tr class="' + placeholderClass + '"></tr>');
       }
     };
-    
-    // Given a parent node, this will collapse (hide) all of its child nodes including grandchildren, etc.
-    // Any expand/collapse links on these descendents will also be reset.
-    function collapseChildren(parentNode) {
-      applyToBranch(parentNode, function(child) {
-        $(getCollapseLinks(child)).hide();
-        $(getExpandLinks(child)).show();
-        $(child).hide();
-      });
-    };
-    
+
     // Someone clicked a "collapse" link.
     // Note that the element being passed into here is the node which contains the link.
     function handleCollapseEvent(event) {
@@ -289,6 +301,16 @@
       collapseChildren(node);
       $(getExpandLinks(node, childType)).show();
       event.preventDefault();
+    };
+    
+    // Given a parent node, this will collapse (hide) all of its child nodes including grandchildren, etc.
+    // Any expand/collapse links on these descendents will also be reset.
+    function collapseChildren(parentNode) {
+      applyToBranch(parentNode, function(child) {
+        $(getCollapseLinks(child)).hide();
+        $(getExpandLinks(child)).show();
+        $(child).hide();
+      });
     };
     
     // Finds the "expand" links in a given node.

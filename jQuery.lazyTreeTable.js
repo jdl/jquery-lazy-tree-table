@@ -45,9 +45,12 @@
       });
     });
     
-    // For a node's expand/collapse links, perform the following:
-    // * Hide the collapse link(s)
-    // * Show any expand links for which there are children of that type.
+    /**
+    * For a node's expand/collapse links, perform the following:
+    * - Hide the collapse link(s).
+    * - Show any expand links for which there are children of that type.
+    * @param 
+    */
     function initNodeLinks(node) {
       var collapseLinks = getCollapseLinks(node);
       var expandLinks = getExpandLinks(node);
@@ -182,7 +185,7 @@
       $(clickedAnchor).hide();
       expandChildren(node, childType);
       $(getCollapseLinks(node, childType)).show();
-      replaceChildrenWithPlaceholder(node, childType);
+      hideDescendentsOfOtherTypes(node, childType);
       
       // If we're dealing with a child type, make sure that for the other types
       // only the expand links are showing.
@@ -257,37 +260,30 @@
       return extraParams;
     };
     
-    /*
-     * Checks for any non-placeholder children which are not of the ignoredChildType
-     * and replaces them with a single child placeholder per child type.
-     */
-    function replaceChildrenWithPlaceholder(node, ignoredChildType) {
-      var childTypesToBeReplaced = [];
+    /**
+    * Hides descendents that are of a type which is different from the type that is passed 
+    * in. This is useful when expanding children of a particular type, so that they don't 
+    * get mixed in with children of a different type.
+    * 
+    * @param {Object} node  The parent element whose descendents will be searched.
+    * @param {String} ignoredChildType  The name of the child type which should not be hidden.
+    */
+    function hideDescendentsOfOtherTypes(node, ignoredChildType) {
+      var childTypesToBeHidden = [];
       getChildren(node).each(function(i, child) {
-        if (!$(child).hasClass(opts.childPlaceholderNodeClass)) {
-          // This child node is not already a placeholder.
-          thisChildType = matchingClassFromElement(hasChildTypeRegex, child);
-          if (thisChildType != '' && thisChildType != ignoredChildType) {
-            // And it's not of the ignored child type.
-            // (Only add it once.)
-            if (!arrayContains(childTypesToBeReplaced, thisChildType)) {
-              childTypesToBeReplaced.push(thisChildType);
-            }
-          }
+        var thisChildType = matchingClassFromElement(hasChildTypeRegex, child);
+        if (thisChildType != '' && thisChildType != ignoredChildType && !arrayContains(childTypesToBeHidden, thisChildType)) {
+          // Not blank, not ignored, and not already found.
+          childTypesToBeHidden.push(thisChildType);
         }
       });
       
-      for(var idx = 0; idx < childTypesToBeReplaced.length; idx++) {
-        // Remove the children of this type, and all of their descendents.
-        getChildren(node, childTypesToBeReplaced[idx]).each(function(i, childNode) {
-          applyToBranch(childNode, function(n) {
-            $(n).remove();
-          });
-          $(childNode).remove();
+      for(var idx = 0; idx < childTypesToBeHidden.length; idx++) {
+        // Hide the children of this type, and all of their descendents.
+        getChildren(node, childTypesToBeHidden[idx]).each(function(i, childNode) {
+          collapseNode(childNode);     // This child ...
+          collapseChildren(childNode); // ... and its descendents too.
         });
-        // Inject a new child placeholder of the appropriate type.
-        var placeholderClass = opts.childNodeClassPrefix + node.id + ' ' + opts.childPlaceholderNodeClass + ' ' + childTypesToBeReplaced[idx];
-        $(node).after('<tr class="' + placeholderClass + '"></tr>');
       }
     };
 
@@ -307,11 +303,21 @@
     // Any expand/collapse links on these descendents will also be reset.
     function collapseChildren(parentNode) {
       applyToBranch(parentNode, function(child) {
-        $(getCollapseLinks(child)).hide();
-        $(getExpandLinks(child)).show();
-        $(child).hide();
+        collapseNode(child);
       });
     };
+    
+    /**
+    * Resets a given node to a "collapsed" state. This means that the row itself is hidden,
+    * the expand link is shown, and the collapse link is hidden.
+    * @param {Object} node  The element which should be collapsed.
+    */
+    function collapseNode(node) {
+      $(getCollapseLinks(node)).hide();
+      $(getExpandLinks(node)).show();
+      $(node).hide();
+    };
+    
     
     // Finds the "expand" links in a given node.
     function getExpandLinks(node, childType) {

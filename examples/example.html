@@ -1,0 +1,154 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+  <title>Example of using jquery.lazyTreeTable.js</title>
+  
+  <!-- Load JavaScript files -->
+  <script src="http://www.google.com/jsapi"></script>
+  <script>
+    google.load("jquery", "1.3.2");
+  </script>
+  <script src="../jquery.lazyTreeTable.js" type="text/javascript"></script>
+  
+  <!-- stylesheets -->
+  <style type="text/css">
+    <!--
+      table {
+        border: 1px solid black;
+        border-collapse: collapse;
+        margin: 10px;
+      }
+      td { border: 1px solid black;}
+      th { border: 1px solid black;}
+      img { border: none; margin: 3px;}
+    -->
+  </style>
+</head>
+<body>
+
+  <script language="javascript" type="text/javascript">
+    $(document).ready(function() {
+      $('#myTable').lazyTreeTable({
+        childFetchPath: "/foo/fetch_row"
+      });
+      // $('#someOtherTable').lazyTreeTable({
+      //   childFetchPath: "/foo/fetch_row"
+      // });
+      // $('#tbodyNodeTable').lazyTreeTable({
+      //   childFetchPath: "/foo/fetch_tbody_nodes",
+      //   parentHtmlType: "tbody"
+      // });
+    });
+  </script>
+
+  <!-- Tree with only one type of child. Shouldn't have to specify any type in this case. -->
+  <table id="someOtherTable" class="data_table">
+    <thead>
+      <tr>
+        <th></th>
+        <th>table 2 A</th>
+        <th>table 2 B</th>
+        <th>table 2 C</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr id="poker_room_1">
+        <td>
+          <a href="#" class="expand">[+]</a>
+          <a href="#" class="collapse">[-]</a>
+        </td>
+        <td>1</td>
+        <td>2</td>
+        <td>3</td>
+      </tr>
+      <tr class="child-of-poker_room_1 child-placeholder"></tr>
+    </tbody>
+  </table>
+
+  <!-- Tree that uses TBODY tags as the nodes. -->
+  <table id="tbodyNodeTable" class="data_table">
+    <thead>
+      <tr>
+        <th colspan="4">This tree uses TBODY elements as nodes.</th>
+      </tr>
+    </thead>
+    <tbody id="">
+      <tr>
+        <td>
+          <!-- Expand/Collapse links for the "blue" set of children for this node. -->
+          <a href="#" class="expand child-type-A" title="Expand blue children">
+            <img src="expand-blue.png" />
+          </a>
+          <a href="#" class="collapse child-type-A" title="Collapse blue children">
+            <img src="collapse-blue.png" />
+          </a>
+          
+          <!-- Expand/Collapse links for the "red" set of children for this node. -->
+          <a href="#" class="expand child-type-B" title="Expand red children">
+            <img src="expand-red.png" />
+          </a>
+          <a href="#" class="collapse child-type-B" title="Collapse red children">
+            <img src="collapse-red.png" />
+          </a>
+        </td>
+        <td>col1 data</td>
+        <td>col2 data</td>
+      </tr>
+      <tr>
+        <td colspan="4">This is another row in the parent node. The spinner shouldn't show up here during a remote fetch.</td>
+      </tr>
+    </tbody>
+    <tbody class="child-placeholder child-of-poker_room_1 child-type-A" style="display:none;"><tr></tr></tbody>
+    <tbody class="child-placeholder child-of-poker_room_1 child-type-B" style="display:none;"><tr></tr></tbody>
+  </table>
+  
+  
+  <!-- Tree with multiple child types. -->
+  <table id="myTable" class="data_table">
+    <thead>
+      <tr>
+        <th>Buttons</th>
+        <th>A</th>
+        <th>B</th>
+        <th>C</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr id="poker_room_1">
+        <td>
+          <!-- Expand/Collapse links for the "A" set of children for this node. -->
+          <a href="#" class="expand child-type-A">[+A]</a>
+          <a href="#" class="collapse child-type-A">[-A]</a>
+          
+          <!-- Expand/Collapse links for the "B" set of children for this node. -->
+          <a href="#" class="expand child-type-B">[+B]</a>
+          <a href="#" class="collapse child-type-B">[-B]</a>
+        </td>
+        <td>PR1 1</td>
+        <td>PR1 2</td>
+        <td>PR1 3</td>
+      </tr>
+      <tr class="child-of-poker_room_1 child-placeholder child-type-A"></tr>
+      <tr class="child-of-poker_room_1 child-placeholder child-type-B"></tr>
+      <tr id="poker_room_2">
+        <td>
+          <a href="#" class="expand child-type-A">[+A]</a>
+          <a href="#" class="collapse child-type-A">[-A]</a></td>
+        <td>PR2 1</td>
+        <td>PR2 2</td>
+        <td>PR2 3</td>
+      </tr>
+      <tr class="child-of-poker_room_2 child-type-A">
+        <td>
+          <a href="#" class="expand child-type-A">[+A]</a>
+          <a href="#" class="collapse child-type-A">[-A]</a>
+        </td>
+        <td>child2_1</td>
+        <td>child2_2</td>
+        <td>child2_3</td>
+      </tr>
+    </tbody>
+  </table>
+
+</body>
+</html>

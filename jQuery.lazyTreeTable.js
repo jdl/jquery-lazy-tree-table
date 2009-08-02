@@ -341,7 +341,7 @@
     // treated as a class name (prefixed with a '.').
     function arrayToClassString(a) {
       if (a != null && a.length > 0) {
-        return s = "." + a.join(",.");
+        return "." + a.join(",.");
       } else {
         return '';
       }

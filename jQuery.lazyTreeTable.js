@@ -13,19 +13,7 @@
 */
 ;(function($) {
   $.fn.lazyTreeTable = function(options) {
-    var defaults = {
-      childFetchPath: "#",
-      childNodeClassPrefix: "child-of-",
-      childPlaceholderNodeClass: "child-placeholder",
-      expandClass: "expand",
-      collapseClass: "collapse",
-      spinnerClass: "spinner",
-      childTypePrefix: "child-type-",  // Only needed if you want to have a parent with multiple sets of children.
-      parentHtmlType: "tr", // 'tr' or 'tbody'. Complex tables which use rowspan can't really use a tr as a parent. Each node should be grouped into it's own tbody.
-      extraParamsFormId: '', // If set to a form ID, the values from the form will be passed along with any remote calls.
-      extraParamsIgnoreList: [] // Blacklist for form input NAMES (not IDs) that you want to ignore.
-    };
-    var opts = $.extend(defaults, options);
+    var opts = $.extend({}, $.fn.lazyTreeTable.defaults, options);
     
     var childOfRegex = new RegExp(opts.childNodeClassPrefix);
     var hasChildTypeRegex = new RegExp(opts.childTypePrefix);
@@ -79,7 +67,7 @@
     // * applyToParent: If true, then the parentNode itself will also have the function applied.
     // * fn: The function to apply to each node in this branch of the tree.
     function applyToBranch(parentNode, fn) {
-      getChildren(parentNode).each(function(i, child) {
+      $.fn.lazyTreeTable.getChildren(parentNode, opts.childNodeClassPrefix).each(function(i, child) {
         fn(child);
         applyToBranch(child, fn);
       });
@@ -90,22 +78,6 @@
       applyToBranch(parentNode, function(node) {
         $(node).hide();
       });
-    };
-    
-    // Returns the parent node to the supplied node, or null.
-    function getParent(node) {
-      var childOfClassName = matchingClassFromElement(childOfRegex, node);
-      if (childOfClassName) {
-        var parentId = childOfClassName.slice(opts.childNodeClassPrefix.length);
-        // The call to .parent() here is the jQuery call that will give us the 
-        // tbody (or table) that contains this node. This is being used to scope the
-        // find to only this table in case there is a duplicate ID in another table
-        // somewhere else on the page.
-        var parent = $(node).parent().find('#' + parentId);
-        return parent;
-      } else {
-        return null;
-      }
     };
     
     // Checks to see if a given node ID is an ancestor of a given node.
@@ -121,39 +93,17 @@
     // Given a node (node), this returns true if there is another node
     // which lists this node as a parent.
     function hasChildren(node, childType) {
-      if (node != null && getChildren(node, childType).length > 0) {
+      if (node != null && $.fn.lazyTreeTable.getChildren(node, opts.childNodeClassPrefix, childType).length > 0) {
         return true;
       } else {
         return false;
       }
     };
     
-    // Returns an array of nodes which are direct descendents of the passed-in node.
-    // If a childType is specifed, only child nodes with that class will be considered.
-    function getChildren(node, childType) {
-      // A node without an ID can't, by definition, have any children.
-      if (!node.id) {
-        return $([]);
-      }
-      
-      // Don't let 'siblings' confuse you here.  That's in terms of the table, where all of the
-      // nodes are siblings. The 'children' we're looking for are other nodes which reference the
-      // current node as a parent.
-      var selectorString = '.' + opts.childNodeClassPrefix + node.id;
-      if (childType) {
-        selectorString = selectorString + "." + childType;
-      }
-      // Finding the node again by ID is a hack to get around what appears to be a bug in 
-      // jQuery. Certain nodes would make it here with a null parent element, when the parent
-      // elem definitely existed. 
-      var children = $('#' + node.id).siblings(selectorString); 
-      return children;
-    };
-    
     // There should only be one placeholder child per parent, but this returns all of them if it
     // finds more than one.
     function getPlaceholderChildren(node, childType) {
-      return getChildren(node, childType).filter('.' + opts.childPlaceholderNodeClass)
+      return $.fn.lazyTreeTable.getChildren(node, opts.childNodeClassPrefix, childType).filter('.' + opts.childPlaceholderNodeClass)
     }
     
     // Given a node (node), this returns true if this node is a child of
@@ -212,7 +162,7 @@
       if (getPlaceholderChildren(parentNode, childType).length > 0) {
         lazyLoadChildren(parentNode, childType);
       }
-      getChildren(parentNode, childType).each(function(i, child) {
+      $.fn.lazyTreeTable.getChildren(parentNode, opts.childNodeClassPrefix, childType).each(function(i, child) {
         $(child).show();
       });
     };
@@ -229,7 +179,7 @@
         
         // Hide any grandchildren (or lower) nodes from the parent that
         // was just expanded.
-        getChildren(parentNode).each(function(i, newNode){
+        $.fn.lazyTreeTable.getChildren(parentNode, opts.childNodeClassPrefix).each(function(i, newNode){
           applyToBranch(newNode, function(node) {
             $(node).hide();
           });
@@ -270,7 +220,7 @@
     */
     function hideDescendentsOfOtherTypes(node, ignoredChildType) {
       var childTypesToBeHidden = [];
-      getChildren(node).each(function(i, child) {
+      $.fn.lazyTreeTable.getChildren(node, opts.childNodeClassPrefix).each(function(i, child) {
         var thisChildType = matchingClassFromElement(hasChildTypeRegex, child);
         if (thisChildType != '' && thisChildType != ignoredChildType && !arrayContains(childTypesToBeHidden, thisChildType)) {
           // Not blank, not ignored, and not already found.
@@ -280,7 +230,7 @@
       
       for(var idx = 0; idx < childTypesToBeHidden.length; idx++) {
         // Hide the children of this type, and all of their descendents.
-        getChildren(node, childTypesToBeHidden[idx]).each(function(i, childNode) {
+        $.fn.lazyTreeTable.getChildren(node, opts.childNodeClassPrefix, childTypesToBeHidden[idx]).each(function(i, childNode) {
           collapseNode(childNode);     // This child ...
           collapseChildren(childNode); // ... and its descendents too.
         });
@@ -295,7 +245,8 @@
       
       $(getCollapseLinks(node, childType)).hide();
       collapseChildren(node);
-      $(getExpandLinks(node, childType)).show();
+      var expandLinks = $(getExpandLinks(node, childType));
+      expandLinks.show();
       event.preventDefault();
     };
     
@@ -313,11 +264,9 @@
     * @param {Object} node  The element which should be collapsed.
     */
     function collapseNode(node) {
-      $(getCollapseLinks(node)).hide();
-      $(getExpandLinks(node)).show();
+      initNodeLinks(node);
       $(node).hide();
     };
-    
     
     // Finds the "expand" links in a given node.
     function getExpandLinks(node, childType) {
@@ -382,4 +331,57 @@
     };
 
   };
+  
+  // lazyTreeTable defaults
+  $.fn.lazyTreeTable.defaults = {
+    childFetchPath: "#",
+    childNodeClassPrefix: "child-of-",
+    childPlaceholderNodeClass: "child-placeholder",
+    expandClass: "expand",
+    collapseClass: "collapse",
+    spinnerClass: "spinner",
+    childTypePrefix: "child-type-",  // Only needed if you want to have a parent with multiple sets of children.
+    parentHtmlType: "tr", // 'tr' or 'tbody'. Complex tables which use rowspan can't really use a tr as a parent. Each node should be grouped into it's own tbody.
+    extraParamsFormId: '', // If set to a form ID, the values from the form will be passed along with any remote calls.
+    extraParamsIgnoreList: [] // Blacklist for form input NAMES (not IDs) that you want to ignore.
+  };
+  
+  // Returns an array of nodes which are direct descendents of the passed-in node.
+  // If a childType is specifed, only child nodes with that class will be considered.
+  $.fn.lazyTreeTable.getChildren = function(node, childNodeClassPrefix, childType) {
+    // A node without an ID can't, by definition, have any children.
+    if (!node.id) {
+      return $([]);
+    }
+    
+    // Don't let 'siblings' confuse you here.  That's in terms of the table, where all of the
+    // nodes are siblings. The 'children' we're looking for are other nodes which reference the
+    // current node as a parent.
+    var selectorString = '.' + childNodeClassPrefix + node.id;
+    if (childType) {
+      selectorString = selectorString + "." + childType;
+    }
+    // Finding the node again by ID is a hack to get around what appears to be a bug in 
+    // jQuery. Certain nodes would make it here with a null parent element, when the parent
+    // elem definitely existed. 
+    var children = $('#' + node.id).siblings(selectorString); 
+    return children;
+  };
+  
+  // Returns the parent node to the supplied node, or null.
+  $.fn.getParent = function(node) {
+    var childOfClassName = matchingClassFromElement(childOfRegex, node);
+    if (childOfClassName) {
+      var parentId = childOfClassName.slice(opts.childNodeClassPrefix.length);
+      // The call to .parent() here is the jQuery call that will give us the 
+      // tbody (or table) that contains this node. This is being used to scope the
+      // find to only this table in case there is a duplicate ID in another table
+      // somewhere else on the page.
+      var parent = $(node).parent().find('#' + parentId);
+      return parent;
+    } else {
+      return null;
+    }
+  };
+  
 })(jQuery);

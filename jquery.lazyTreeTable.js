@@ -141,7 +141,8 @@
       // only the expand links are showing.
       if (childType) {
         $(getExpandLinks(node)).each(function(i, link){
-          if(matchingClassFromElement(hasChildTypeRegex, link) != childType) {
+          var childTypeClass = matchingClassFromElement(hasChildTypeRegex, link);
+          if(childTypeClass != childType && hasChildren(node, childTypeClass)) {
             $(link).show();
           }
         });
@@ -241,7 +242,15 @@
     // Note that the element being passed into here is the node which contains the link.
     function handleCollapseEvent(event) {
       var node = event.data.element;
-      var childType = matchingClassFromElement(hasChildTypeRegex, event.target);
+      
+      // If the target is an image, then we should look at the surrounding anchor tag, if any,
+      // to determine which child type we're dealing with.
+      var childType;
+      if (event.target.tagName == "IMG" && event.target.parentElement.tagName == "A") {
+        childType = matchingClassFromElement(hasChildTypeRegex, event.target.parentElement);
+      } else {
+        childType = matchingClassFromElement(hasChildTypeRegex, event.target);
+      }
       
       $(getCollapseLinks(node, childType)).hide();
       collapseChildren(node);

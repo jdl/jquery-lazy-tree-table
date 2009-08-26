@@ -19,19 +19,25 @@
     var hasChildTypeRegex = new RegExp(opts.childTypePrefix);
     
     return this.each(function() {
-      var parentSelector = '#' + this.id;
-      if (opts.parentHtmlType == 'tr') {
-        parentSelector = parentSelector + '>tbody>tr';
-      } else if (opts.parentHtmlType == 'tbody') {
-        parentSelector = parentSelector + '>tbody';
-      }
-      $(parentSelector).each(function(i, node) {
+      opts.tableId = this.id;
+      allNodes().each(function(i, node) {
         initNodeLinks(node);
         if(!isChild(node)) {
           hideDescendents(node);
         }
       });
     });
+    
+    function allNodes() {
+      var nodeSelector = '#' + opts.tableId;
+      if (opts.parentHtmlType == 'tr') {
+        nodeSelector = nodeSelector + '>tbody>tr';
+      } else if (opts.parentHtmlType == 'tbody') {
+        nodeSelector = nodeSelector + '>tbody';
+      }
+      return $(nodeSelector);
+    }
+    
     
     /**
     * For a node's expand/collapse links, perform the following:
@@ -166,6 +172,7 @@
       $.fn.lazyTreeTable.getChildren(parentNode, opts.childNodeClassPrefix, childType).each(function(i, child) {
         $(child).show();
       });
+      zebraStripe();
     };
     
     // Given a parent node, this finds any children which are currently placeholders and replaces them
@@ -192,6 +199,7 @@
         });
         
         $('td:first', parentNode).removeClass(opts.spinnerClass);
+        zebraStripe();
       });
     };
     
@@ -265,6 +273,7 @@
       applyToBranch(parentNode, function(child) {
         collapseNode(child);
       });
+      zebraStripe();
     };
     
     /**
@@ -338,7 +347,36 @@
       }
       return false;
     };
-
+    
+    
+    /*
+     * If zebra striping is enabled, this will reapply the odd/even classes to all visible nodes.
+     */
+    function zebraStripe() {
+      if(opts.zebraStriping.enabled) {
+        allNodes().siblings(':visible').each(function(i, node) {
+          if(i % 2) {
+            // Odd node
+            // If an even row class is in use, remove it.  Then add the odd class.
+            if(opts.zebraStriping.even_class != "") {
+              $(node).removeClass(opts.zebraStriping.even_class);
+            }
+            if(opts.zebraStriping.odd_class != "") {
+              $(node).addClass(opts.zebraStriping.odd_class)
+            }
+          } else {
+            // Even node
+            // If an odd row class is in use, remove it.  Then add the even class.
+            if(opts.zebraStriping.odd_class != "") {
+              $(node).removeClass(opts.zebraStriping.odd_class);
+            }
+            if(opts.zebraStriping.even_class != "") {
+              $(node).addClass(opts.zebraStriping.even_class)
+            }
+          }
+        });
+      }
+    }
   };
   
   // lazyTreeTable defaults
@@ -352,7 +390,8 @@
     childTypePrefix: "child-type-",  // Only needed if you want to have a parent with multiple sets of children.
     parentHtmlType: "tr", // 'tr' or 'tbody'. Complex tables which use rowspan can't really use a tr as a parent. Each node should be grouped into it's own tbody.
     extraParamsFormId: '', // If set to a form ID, the values from the form will be passed along with any remote calls.
-    extraParamsIgnoreList: [] // Blacklist for form input NAMES (not IDs) that you want to ignore.
+    extraParamsIgnoreList: [], // Blacklist for form input NAMES (not IDs) that you want to ignore.
+    zebraStriping: {enabled: false, odd_class: '', even_class: ''}
   };
   
   // Returns an array of nodes which are direct descendents of the passed-in node.

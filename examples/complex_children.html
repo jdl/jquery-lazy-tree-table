@@ -1,0 +1,76 @@
+<html>
+  <head>
+    <title>Complex Children Example</title>
+
+    <!-- Load JavaScript files -->
+    <script src="http://www.google.com/jsapi"></script>
+    <script>
+      google.load("jquery", "1.3.2");
+    </script>
+    <script src="../jquery.lazyTreeTable.js" type="text/javascript"></script>
+
+    <!-- stylesheets -->
+    <style type="text/css">
+      <!--
+        table {
+          border: 1px solid black;
+          border-collapse: collapse;
+          margin: 10px;
+        }
+        tr.alt {background-color: cc9999;}
+        td { border: 1px solid black;}
+        th { border: 1px solid black;}
+        img { border: none; margin: 3px;}
+      -->
+    </style>
+
+  </head>
+  <body>
+    <h4>Complex Children Example</h4>
+    <p>Example of using lazyTreeTable with a two types of children for the same parent.</p>
+  </body>
+  
+  <table id="simple_children">
+    <thead>
+      <tr>
+        <th>Controls</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr id="genre_1" class="alt">
+        <td>
+          <a href="#" class="expand child-type-authors">[+ Authors]</a>
+          <a href="#" class="collapse child-type-authors">[- Authors]</a>
+          <a href="#" class="expand child-type-books">[+ Books]</a>
+          <a href="#" class="collapse child-type-books">[- Books]</a>
+        </td>
+        <td>Fantasy</td>
+        <td>Sword-and-Scorcery</td>
+      </tr>
+      <tr id="author_1" class="child-of-genre_1 child-type-authors">
+        <td></td>
+        <td>George R.R. Martin</td>
+        <td>Author of "A Song of Ice and Fire"</td>
+      </tr>
+      <tr id="author_2" class="child-of-genre_1 child-type-authors">
+        <td></td>
+        <td>Robert Jordan</td>
+        <td>Author of "The Wheel of Time"</td>
+      </tr>
+      <tr class="child-of-genre_1 child-placeholder child-type-books"></tr>
+    </tbody>
+  </table>
+  
+  
+  <script language="javascript" type="text/javascript">
+    $(document).ready(function() {
+      $('#simple_children').lazyTreeTable({
+        childFetchPath: "remote_rows/complex_children_lazy_rows.html",
+        zebraStriping: {enabled: true, odd_class: 'alt', even_class: ''}
+      });
+    });
+  </script>
+  
+</html>

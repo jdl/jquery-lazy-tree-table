@@ -28,12 +28,17 @@
       });
     });
     
-    function allNodes() {
+    function allNodes(options) {
+      var allNodesOpts = $.extend({}, {only_visible: false}, options);
       var nodeSelector = '#' + opts.tableId;
       if (opts.parentHtmlType == 'tr') {
         nodeSelector = nodeSelector + '>tbody>tr';
       } else if (opts.parentHtmlType == 'tbody') {
         nodeSelector = nodeSelector + '>tbody';
+      }
+      
+      if (allNodesOpts.only_visible) {
+        nodeSelector = nodeSelector + ':visible';
       }
       return $(nodeSelector);
     }
@@ -354,7 +359,7 @@
      */
     function zebraStripe() {
       if(opts.zebraStriping.enabled) {
-        allNodes().siblings(':visible').each(function(i, node) {
+        allNodes({only_visible: true}).each(function(i, node) {
           if(i % 2) {
             // Odd node
             // If an even row class is in use, remove it.  Then add the odd class.

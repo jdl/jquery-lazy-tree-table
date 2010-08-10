@@ -57,14 +57,14 @@
       // Hide all of the collapse buttons.
       if (collapseLinks.length > 0) {
         $(collapseLinks).hide();
-        $(collapseLinks).bind("click", {element: node}, handleCollapseEvent);
+        $(collapseLinks).unbind("click").bind("click", {element: node}, handleCollapseEvent);
       }
       
       if (expandLinks.length > 0) {
         $(expandLinks).each(function(i, link) {
           if (hasChildren(node, matchingClassFromElement(hasChildTypeRegex, link))) {
             $(link).show();
-            $(link).bind("click", {element: node}, handleExpandEvent);
+            $(link).unbind("click").bind("click", {element: node}, handleExpandEvent);
           } else {
             $(link).hide();
           }
